@@ -2,7 +2,7 @@ import NeuronLayer from './NeuronLayer';
 
 export default class NeuralNetwork {
     constructor(
-        private readonly numInputs: number,
+        private readonly inputsNumber: number,
         private readonly hiddenLayers: NeuronLayer[],
         private readonly outputLayer: NeuronLayer,
         private readonly learningRate: number = 0.5,
@@ -15,7 +15,7 @@ export default class NeuralNetwork {
 
         // TODO refactor it
         firstLayer.getNeurons().forEach((neuron) => {
-            Array(this.numInputs).fill(0).forEach(() => neuron.addWeight(Math.random()));
+            Array(this.inputsNumber).fill(0).forEach(() => neuron.addWeight(Math.random()));
         });
 
         [...otherLayers, this.outputLayer].forEach((layer, i) => {
@@ -29,34 +29,21 @@ export default class NeuralNetwork {
     public train(trainingInputs: number[], trainingOutputs: number[]) {
         this.feetForward(trainingInputs);
 
-        const outputDeltas = this.outputLayer.getNeurons().map((outputNeuron, i) => {
-            return outputNeuron.calculateDelta(trainingOutputs[i]);
-        });
+        const outputDeltas = this.calculateOutputDeltas(trainingOutputs);
 
         this.updateNeuronsWeights(this.outputLayer, outputDeltas);
-
-        let nextLayer = this.outputLayer;
-        let nextLayerDeltas = outputDeltas;
-
-        [...this.hiddenLayers].reverse().forEach((previousLayer) => {
-            const previousLayerDeltas = previousLayer.getNeurons().map((previousNeuron, i) => {
-                const currentLayerOutputDeltas = nextLayer.getNeurons().reduce((sum, nextNeuron, j) => {
-                    return sum + nextLayerDeltas[j] * nextNeuron.getWeight(i).getValue();
-                }, 0);
-
-                return currentLayerOutputDeltas * previousNeuron.calculateDerivativeTotalInput();
-            });
-
-            nextLayer = previousLayer;
-            nextLayerDeltas = previousLayerDeltas;
-
-            this.updateNeuronsWeights(previousLayer, previousLayerDeltas);
-        });
+        this.updateHiddenLayersWeights(this.hiddenLayers, this.outputLayer, outputDeltas);
     }
 
     private feetForward(inputs: number[]): number[] {
         const hiddenLayerOutputs = this.hiddenLayers.reduce((previousLayerOutputs, nextLayer) => nextLayer.feedForward(previousLayerOutputs), inputs);
         return this.outputLayer.feedForward(hiddenLayerOutputs);
+    }
+
+    private calculateOutputDeltas(trainingOutputs: number[]): number[] {
+        return this.outputLayer.getNeurons().map((outputNeuron, i) => {
+            return outputNeuron.calculateDelta(trainingOutputs[i]);
+        });
     }
 
     private updateNeuronsWeights(neuronLayer: NeuronLayer, deltas: number[]) {
@@ -65,6 +52,24 @@ export default class NeuralNetwork {
                 neuronWeight.setValue(neuronWeight.getValue() - this.learningRate * deltas[i] * neuron.getInput(j));
             });
         });
+    }
+
+    private updateHiddenLayersWeights(previousLayers: NeuronLayer[], nextLayer: NeuronLayer, nextLayerDeltas: number[]) {
+        const previousLayersCopy = [...previousLayers];
+        const currentLayer = previousLayersCopy.pop();
+
+        const currentLayerDeltas = currentLayer.getNeurons().map((currentNeuron, i) => {
+            const currentLayerOutputDeltas = nextLayer.getNeurons().reduce((sum, nextNeuron, j) => {
+                return sum + nextLayerDeltas[j] * nextNeuron.getWeight(i).getValue();
+            }, 0);
+            return currentLayerOutputDeltas * currentNeuron.calculateDerivativeTotalInput();
+        });
+
+        this.updateNeuronsWeights(currentLayer, currentLayerDeltas);
+
+        if (previousLayersCopy.length > 0) {
+            this.updateHiddenLayersWeights(previousLayersCopy, currentLayer, currentLayerDeltas);
+        }
     }
 
     public calculateTotalError(trainingSet: Array<[number[], number[]]>) {

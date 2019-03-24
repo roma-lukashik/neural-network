@@ -12,10 +12,6 @@ export default class Neuron {
     ) {
     }
 
-    public getOutput(): number {
-        return this.output;
-    }
-
     public addWeight(weight: number) {
         this.weights.push(new Weight(weight));
     }
@@ -38,7 +34,7 @@ export default class Neuron {
         return this.output;
     }
 
-    public calculateTotalInput(): number {
+    private calculateTotalInput(): number {
         return this.inputs.reduce((sum, input, i) => sum + input * this.weights[i].getValue(), this.bias);
     }
 
@@ -46,7 +42,7 @@ export default class Neuron {
         return this.calculateOutputError(targetOutput) * this.calculateDerivativeTotalInput();
     }
 
-    public calculateOutputError(targetOutput: number): number {
+    private calculateOutputError(targetOutput: number): number {
         return -(targetOutput - this.output);
     }
 
