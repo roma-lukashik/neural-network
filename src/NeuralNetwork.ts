@@ -31,44 +31,60 @@ export default class NeuralNetwork {
 
         const outputDeltas = this.calculateOutputDeltas(trainingOutputs);
 
+        // console.log(JSON.stringify(this.outputLayer.getNeurons().map((n) => n.getOutput())));
+
         this.updateNeuronsWeights(this.outputLayer, outputDeltas);
         this.updateHiddenLayersWeights(this.hiddenLayers, this.outputLayer, outputDeltas);
     }
 
     private feetForward(inputs: number[]): number[] {
-        const hiddenLayerOutputs = this.hiddenLayers.reduce((previousLayerOutputs, nextLayer) => nextLayer.feedForward(previousLayerOutputs), inputs);
+        const hiddenLayerOutputs = this.hiddenLayers.reduce(
+            (previousLayerOutputs, nextLayer) => nextLayer.feedForward(previousLayerOutputs),
+            inputs,
+        );
+
         return this.outputLayer.feedForward(hiddenLayerOutputs);
     }
 
     private calculateOutputDeltas(trainingOutputs: number[]): number[] {
+        const derivativeActivation = this.outputLayer.calculateDerivativeNeuronsActivation();
+        return this.calculateDerivativeCrossEntropy(trainingOutputs).map((derivativeCrossEntropy, i) => {
+            return derivativeCrossEntropy * derivativeActivation[i];
+        });
+    }
+
+    private calculateDerivativeCrossEntropy(trainingOutputs: number[]) {
         return this.outputLayer.getNeurons().map((outputNeuron, i) => {
-            return outputNeuron.calculateDelta(trainingOutputs[i]);
+            return -(
+                trainingOutputs[i] * (1 / outputNeuron.getOutput()) +
+                (1 - trainingOutputs[i]) * (1 / (1 - outputNeuron.getOutput()))
+            );
         });
     }
 
     private updateNeuronsWeights(neuronLayer: NeuronLayer, deltas: number[]) {
         neuronLayer.getNeurons().forEach((neuron, i) => {
             neuron.getWeights().forEach((neuronWeight, j) => {
-                neuronWeight.setValue(neuronWeight.getValue() - this.learningRate * deltas[i] * neuron.getInput(j));
+                neuronWeight.setValue(neuronWeight.getValue() + this.learningRate * deltas[i] * neuron.getInput(j));
             });
         });
     }
 
     private updateHiddenLayersWeights(previousLayers: NeuronLayer[], nextLayer: NeuronLayer, nextLayerDeltas: number[]) {
         const previousLayersCopy = [...previousLayers];
-        const currentLayer = previousLayersCopy.pop();
+        const previousLayer = previousLayersCopy.pop();
+        const derivativeActivation = previousLayer.calculateDerivativeNeuronsActivation();
 
-        const currentLayerDeltas = currentLayer.getNeurons().map((currentNeuron, i) => {
-            const currentLayerOutputDeltas = nextLayer.getNeurons().reduce((sum, nextNeuron, j) => {
+        const previousLayerDeltas = previousLayer.getNeurons().map((previousNeuron, i) => {
+            return derivativeActivation[i] * nextLayer.getNeurons().reduce((sum, nextNeuron, j) => {
                 return sum + nextLayerDeltas[j] * nextNeuron.getWeight(i).getValue();
             }, 0);
-            return currentLayerOutputDeltas * currentNeuron.calculateDerivativeTotalInput();
         });
 
-        this.updateNeuronsWeights(currentLayer, currentLayerDeltas);
+        this.updateNeuronsWeights(previousLayer, previousLayerDeltas);
 
         if (previousLayersCopy.length > 0) {
-            this.updateHiddenLayersWeights(previousLayersCopy, currentLayer, currentLayerDeltas);
+            this.updateHiddenLayersWeights(previousLayersCopy, previousLayer, previousLayerDeltas);
         }
     }
 
@@ -78,7 +94,10 @@ export default class NeuralNetwork {
         trainingSet.forEach(([trainingInputs]) => this.feetForward(trainingInputs));
 
         return trainingSet.reduce((error, [, trainingOutputs]) => {
-            return trainingOutputs.reduce((sum, trainingOutput, i) => sum + outputLayerNeurons[i].calculateError(trainingOutput), error);
+            return trainingOutputs.reduce(
+                (sum, trainingOutput, i) => sum + outputLayerNeurons[i].calculateError(trainingOutput),
+                error,
+            );
         }, 0);
     }
 }
