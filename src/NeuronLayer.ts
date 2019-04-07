@@ -1,5 +1,5 @@
 import Neuron from './Neuron';
-import { IActivateFunction } from './ActivateFunctions';
+import { IActivateFunction } from './activate-functions';
 
 export default class NeuronLayer {
     private readonly neurons: Neuron[];

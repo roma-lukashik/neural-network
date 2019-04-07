@@ -1,18 +1,18 @@
 import NeuralNetwork from '../NeuralNetwork';
 import NeuronLayer from '../NeuronLayer';
-import { ActivateFunction, ActiveFunctions } from '../ActivateFunctions';
 import { trainingData } from './trainExamples';
+import { ActivateFunctions } from '../activate-functions';
+import { gradientDescent } from '../optimizers';
 
 const imageSize = 28 * 28;
 const classesNumber = 10; // ten unique numbers
 
-const hiddenLayers = [
-    new NeuronLayer(100, ActiveFunctions[ActivateFunction.Sigmoid]),
+const layers = [
+    new NeuronLayer(100, ActivateFunctions.sigmoid),
+    new NeuronLayer(classesNumber, ActivateFunctions.softmax),
 ];
 
-const outputLayer = new NeuronLayer(classesNumber, ActiveFunctions[ActivateFunction.Softmax]);
-
-const neuralNetwork = new NeuralNetwork(imageSize, hiddenLayers, outputLayer);
+const neuralNetwork = new NeuralNetwork(imageSize, layers);
 
 const trainings = [...trainingData];
 
@@ -21,7 +21,7 @@ const epochs = 5;
 for (let i = 1; i <= epochs; i++) {
     trainings.forEach(([feature, label]) => {
         for (let j = 0; j < 5; j++) {
-            neuralNetwork.train(feature, label);
+            neuralNetwork.train(feature, label, gradientDescent);
         }
     });
 

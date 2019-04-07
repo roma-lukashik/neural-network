@@ -1,77 +1,46 @@
 import NeuronLayer from './NeuronLayer';
+import { Optimizer } from './optimizers';
 
 export default class NeuralNetwork {
+    private readonly hiddenLayers: NeuronLayer[];
+    private readonly outputLayer: NeuronLayer;
+
     constructor(
         private readonly inputsNumber: number,
-        private readonly hiddenLayers: NeuronLayer[],
-        private readonly outputLayer: NeuronLayer,
+        private readonly layers: NeuronLayer[],
         private readonly learningRate: number = 0.1,
     ) {
+        this.hiddenLayers = this.layers.slice(0, this.layers.length - 1);
+        this.outputLayer = this.layers[this.layers.length - 1];
+
         this.initializeWeights();
     }
 
     private initializeWeights() {
-        const [firstLayer, ...otherLayers] = this.hiddenLayers;
+        const [firstLayer, ...otherLayers] = this.layers;
 
-        // TODO refactor it
         firstLayer.getNeurons().forEach((neuron) => {
             Array(this.inputsNumber).fill(0).forEach(() => neuron.addWeight(Math.random() - 0.5));
         });
 
-        [...otherLayers, this.outputLayer].forEach((layer, i) => {
-            const previousLayer = this.hiddenLayers[i];
+        otherLayers.forEach((layer, i) => {
+            const previousLayer = this.layers[i];
             layer.getNeurons().forEach((neuron) => {
                 previousLayer.getNeurons().forEach(() => neuron.addWeight(Math.random() - 0.5));
             });
         });
     }
 
-    public train(trainingInputs: number[], trainingOutputs: number[]) {
+    public train(trainingInputs: number[], trainingOutputs: number[], optimizer: Optimizer) {
         this.feetForward(trainingInputs);
 
-        const outputDeltas = this.calculateOutputDeltas(trainingOutputs);
-        const hiddenDeltas = this.calculateHiddenDeltas(this.hiddenLayers, this.outputLayer, outputDeltas);
+        const deltas = optimizer(this.hiddenLayers, this.outputLayer, trainingOutputs);
 
-        this.updateNeuronsWeights(this.outputLayer, outputDeltas);
-        this.hiddenLayers.forEach((hiddenLayer, i) => this.updateNeuronsWeights(hiddenLayer, hiddenDeltas[i]));
+        this.layers.forEach((layer, i) => this.updateNeuronsWeights(layer, deltas[i]));
     }
 
-    public feetForward(inputs: number[]): number[] {
-        return [...this.hiddenLayers, this.outputLayer].reduce(
-            (nextLayerInput, nextLayer) => nextLayer.feedForward(nextLayerInput),
-            inputs,
-        );
-    }
-
-    private calculateOutputDeltas(trainingOutputs: number[]): number[] {
-        const derivativeActivation = this.outputLayer.calculatePdTotalNetInputWrtInput();
-        return this.calculatePdErrorWrtOutput(trainingOutputs).map((pdErrorWrtOutput, i) => {
-            return pdErrorWrtOutput * derivativeActivation[i];
-        });
-    }
-
-    private calculatePdErrorWrtOutput(trainingOutputs: number[]) {
-        return this.outputLayer.getNeurons().map((outputNeuron, i) => {
-            return outputNeuron.getOutput() - trainingOutputs[i];
-        });
-    }
-
-    private calculateHiddenDeltas(previousLayers: NeuronLayer[], nextLayer: NeuronLayer, nextLayerDeltas: number[]) {
-        const previousLayersCopy = [...previousLayers];
-        const previousLayer = previousLayersCopy.pop();
-        const derivativeActivation = previousLayer.calculatePdTotalNetInputWrtInput();
-
-        const previousLayerDeltas = previousLayer.getNeurons().map((previousNeuron, i) => {
-            return derivativeActivation[i] * nextLayer.getNeurons().reduce((sum, nextNeuron, j) => {
-                return sum + nextLayerDeltas[j] * nextNeuron.getWeight(i).getValue();
-            }, 0);
-        });
-
-        if (previousLayersCopy.length > 0) {
-            return [...this.calculateHiddenDeltas(previousLayersCopy, previousLayer, previousLayerDeltas), previousLayerDeltas];
-        } else {
-            return [previousLayerDeltas];
-        }
+    public feetForward(feature: number[]): number[] {
+        return this.layers.reduce((layerInput, layer) => layer.feedForward(layerInput), feature);
     }
 
     private updateNeuronsWeights(neuronLayer: NeuronLayer, deltas: number[]) {
