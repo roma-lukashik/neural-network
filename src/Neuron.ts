@@ -5,7 +5,7 @@ export default class Neuron {
     private inputs: number[] = [];
     private output: number = 0;
 
-    constructor(private readonly bias: number) { }
+    constructor(private bias: number) { }
 
     public addWeight(weight: number) {
         this.weights.push(new Weight(weight));
@@ -19,12 +19,20 @@ export default class Neuron {
         return this.weights[index];
     }
 
-    public getInput(index: number): number {
+    public calculatePdTotalNetInputWrtWeight(index: number): number {
         return this.inputs[index];
     }
 
     public setInputs(inputs: number[]) {
         this.inputs = inputs;
+    }
+
+    public getBias(): number {
+        return this.bias;
+    }
+
+    public setBias(bias: number) {
+        this.bias = bias;
     }
 
     public getOutput(): number {

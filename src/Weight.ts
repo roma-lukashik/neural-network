@@ -6,7 +6,7 @@ export default class Weight {
         return this.value;
     }
 
-    public setValue(value) {
+    public setValue(value: number) {
         this.value = value;
     }
 }

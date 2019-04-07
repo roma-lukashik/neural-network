@@ -4,7 +4,7 @@ import { IActivateFunction } from './ActivateFunctions';
 export default class NeuronLayer {
     private readonly neurons: Neuron[];
 
-    constructor(neuronsNumber: number, private activateFn: IActivateFunction, bias: number = Math.random()) {
+    constructor(neuronsNumber: number, private activateFn: IActivateFunction, bias: number = Math.random() - 0.5) {
         this.neurons = Array(neuronsNumber).fill(0).map(() => new Neuron(bias));
     }
 
@@ -13,7 +13,7 @@ export default class NeuronLayer {
     }
 
     public feedForward(inputs: number[]): number[] {
-        this.neurons.map((neuron) => neuron.setInputs(inputs));
+        this.neurons.forEach((neuron) => neuron.setInputs(inputs));
 
         const outputs = this.calculateNeuronsActivation();
 
@@ -24,7 +24,7 @@ export default class NeuronLayer {
         return this.activateFn.fx(this.getNeuronsInputSum());
     }
 
-    public calculateDerivativeNeuronsActivation(): number[] {
+    public calculatePdTotalNetInputWrtInput(): number[] {
         return this.activateFn.dx(this.getNeuronsInputSum());
     }
 

@@ -5,7 +5,7 @@ export default class NeuralNetwork {
         private readonly inputsNumber: number,
         private readonly hiddenLayers: NeuronLayer[],
         private readonly outputLayer: NeuronLayer,
-        private readonly learningRate: number = 0.5,
+        private readonly learningRate: number = 0.1,
     ) {
         this.initializeWeights();
     }
@@ -15,13 +15,13 @@ export default class NeuralNetwork {
 
         // TODO refactor it
         firstLayer.getNeurons().forEach((neuron) => {
-            Array(this.inputsNumber).fill(0).forEach(() => neuron.addWeight(Math.random()));
+            Array(this.inputsNumber).fill(0).forEach(() => neuron.addWeight(Math.random() - 0.5));
         });
 
         [...otherLayers, this.outputLayer].forEach((layer, i) => {
             const previousLayer = this.hiddenLayers[i];
             layer.getNeurons().forEach((neuron) => {
-                previousLayer.getNeurons().forEach(() => neuron.addWeight(Math.random()));
+                previousLayer.getNeurons().forEach(() => neuron.addWeight(Math.random() - 0.5));
             });
         });
     }
@@ -30,50 +30,36 @@ export default class NeuralNetwork {
         this.feetForward(trainingInputs);
 
         const outputDeltas = this.calculateOutputDeltas(trainingOutputs);
-
-        // console.log(JSON.stringify(this.outputLayer.getNeurons().map((n) => n.getOutput())));
+        const hiddenDeltas = this.calculateHiddenDeltas(this.hiddenLayers, this.outputLayer, outputDeltas);
 
         this.updateNeuronsWeights(this.outputLayer, outputDeltas);
-        this.updateHiddenLayersWeights(this.hiddenLayers, this.outputLayer, outputDeltas);
+        this.hiddenLayers.forEach((hiddenLayer, i) => this.updateNeuronsWeights(hiddenLayer, hiddenDeltas[i]));
     }
 
-    private feetForward(inputs: number[]): number[] {
-        const hiddenLayerOutputs = this.hiddenLayers.reduce(
-            (previousLayerOutputs, nextLayer) => nextLayer.feedForward(previousLayerOutputs),
+    public feetForward(inputs: number[]): number[] {
+        return [...this.hiddenLayers, this.outputLayer].reduce(
+            (nextLayerInput, nextLayer) => nextLayer.feedForward(nextLayerInput),
             inputs,
         );
-
-        return this.outputLayer.feedForward(hiddenLayerOutputs);
     }
 
     private calculateOutputDeltas(trainingOutputs: number[]): number[] {
-        const derivativeActivation = this.outputLayer.calculateDerivativeNeuronsActivation();
-        return this.calculateDerivativeCrossEntropy(trainingOutputs).map((derivativeCrossEntropy, i) => {
-            return derivativeCrossEntropy * derivativeActivation[i];
+        const derivativeActivation = this.outputLayer.calculatePdTotalNetInputWrtInput();
+        return this.calculatePdErrorWrtOutput(trainingOutputs).map((pdErrorWrtOutput, i) => {
+            return pdErrorWrtOutput * derivativeActivation[i];
         });
     }
 
-    private calculateDerivativeCrossEntropy(trainingOutputs: number[]) {
+    private calculatePdErrorWrtOutput(trainingOutputs: number[]) {
         return this.outputLayer.getNeurons().map((outputNeuron, i) => {
-            return -(
-                trainingOutputs[i] * (1 / outputNeuron.getOutput()) +
-                (1 - trainingOutputs[i]) * (1 / (1 - outputNeuron.getOutput()))
-            );
+            return outputNeuron.getOutput() - trainingOutputs[i];
         });
     }
 
-    private updateNeuronsWeights(neuronLayer: NeuronLayer, deltas: number[]) {
-        neuronLayer.getNeurons().forEach((neuron, i) => {
-            neuron.getWeights().forEach((neuronWeight, j) => {
-                neuronWeight.setValue(neuronWeight.getValue() + this.learningRate * deltas[i] * neuron.getInput(j));
-            });
-        });
-    }
-
-    private updateHiddenLayersWeights(previousLayers: NeuronLayer[], nextLayer: NeuronLayer, nextLayerDeltas: number[]) {
+    private calculateHiddenDeltas(previousLayers: NeuronLayer[], nextLayer: NeuronLayer, nextLayerDeltas: number[]) {
         const previousLayersCopy = [...previousLayers];
         const previousLayer = previousLayersCopy.pop();
-        const derivativeActivation = previousLayer.calculateDerivativeNeuronsActivation();
+        const derivativeActivation = previousLayer.calculatePdTotalNetInputWrtInput();
 
         const previousLayerDeltas = previousLayer.getNeurons().map((previousNeuron, i) => {
             return derivativeActivation[i] * nextLayer.getNeurons().reduce((sum, nextNeuron, j) => {
@@ -81,23 +67,29 @@ export default class NeuralNetwork {
             }, 0);
         });
 
-        this.updateNeuronsWeights(previousLayer, previousLayerDeltas);
-
         if (previousLayersCopy.length > 0) {
-            this.updateHiddenLayersWeights(previousLayersCopy, previousLayer, previousLayerDeltas);
+            return [...this.calculateHiddenDeltas(previousLayersCopy, previousLayer, previousLayerDeltas), previousLayerDeltas];
+        } else {
+            return [previousLayerDeltas];
         }
+    }
+
+    private updateNeuronsWeights(neuronLayer: NeuronLayer, deltas: number[]) {
+        neuronLayer.getNeurons().forEach((neuron, i) => {
+            neuron.getWeights().forEach((neuronWeight, j) => {
+                neuronWeight.setValue(neuronWeight.getValue() - this.learningRate * deltas[i] * neuron.calculatePdTotalNetInputWrtWeight(j));
+            });
+            neuron.setBias(neuron.getBias() - this.learningRate * deltas[i]);
+        });
     }
 
     public calculateTotalError(trainingSet: Array<[number[], number[]]>) {
         const outputLayerNeurons = this.outputLayer.getNeurons();
 
-        trainingSet.forEach(([trainingInputs]) => this.feetForward(trainingInputs));
-
-        return trainingSet.reduce((error, [, trainingOutputs]) => {
-            return trainingOutputs.reduce(
-                (sum, trainingOutput, i) => sum + outputLayerNeurons[i].calculateError(trainingOutput),
-                error,
-            );
-        }, 0);
+        return trainingSet.reduce((error, [trainingInputs, trainingOutputs]) => {
+            this.feetForward(trainingInputs);
+            const err = trainingOutputs.reduce((sum, trainingOutput, i) => sum + outputLayerNeurons[i].calculateError(trainingOutput), 0);
+            return error + err;
+        }, 0) / trainingSet.length;
     }
 }
