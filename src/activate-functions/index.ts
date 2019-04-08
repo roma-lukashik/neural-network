@@ -1,10 +1,11 @@
 import { dxSigmoid, sigmoid } from './Sigmoid';
 import { dxRelu, relu } from './Relu';
 import { dxSoftmax, softmax } from './Softmax';
+import { Vector } from '../engine/VectorsOperators';
 
 export interface IActivateFunction {
-    fx: (vector: number[]) => number[],
-    dx: (vector: number[]) => number[],
+    fx: (vector: Vector) => Vector,
+    dx: (vector: Vector) => Vector,
 }
 
 export const ActivateFunctions = {

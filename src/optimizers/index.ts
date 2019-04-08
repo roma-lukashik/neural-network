@@ -1,11 +1,12 @@
 import NeuronLayer from '../NeuronLayer';
 import { LossFunction } from '../loss-functions';
+import { Vector } from '../engine/VectorsOperators';
 
 export type Optimizer = (
     hiddenLayers: NeuronLayer[],
     outputLayer: NeuronLayer,
-    trainingOutputs: number[],
+    trainingOutputs: Vector,
     dxLossFunction: LossFunction,
-) => number[][];
+) => Vector[];
 
 export { gradientDescent } from './GradientDescent';

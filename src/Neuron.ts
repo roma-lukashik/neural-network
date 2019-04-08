@@ -1,9 +1,10 @@
 import Weight from './Weight';
 import * as vector from './engine/VectorsOperators';
+import Vector = vector.Vector;
 
 export default class Neuron {
     private readonly weights: Weight[] = [];
-    private inputs: number[] = [];
+    private inputs: Vector = [];
     private output: number = 0;
 
     constructor(private bias: number) { }
@@ -24,7 +25,7 @@ export default class Neuron {
         return this.inputs[index];
     }
 
-    public setInputs(inputs: number[]) {
+    public setInputs(inputs: Vector) {
         this.inputs = inputs;
     }
 
