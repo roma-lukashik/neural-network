@@ -1,6 +1,18 @@
 import NeuronLayer from './NeuronLayer';
-import { Optimizer } from './optimizers';
-import { ILossFunction } from './loss-functions';
+import { gradientDescent, Optimizer } from './optimizers';
+import { ILossFunction, LossFunction, LossFunctions } from './loss-functions';
+
+interface ITrainOptions {
+    optimizer: Optimizer;
+    lossFunction: ILossFunction;
+    epochs: number;
+}
+
+const defaultTrainOptions: ITrainOptions = {
+    optimizer: gradientDescent,
+    lossFunction: LossFunctions.quadratic,
+    epochs: 5,
+};
 
 export default class NeuralNetwork {
     private readonly hiddenLayers: NeuronLayer[];
@@ -32,12 +44,26 @@ export default class NeuralNetwork {
         });
     }
 
-    public train(trainingInputs: number[], trainingOutputs: number[], optimizer: Optimizer, lossFunction: ILossFunction) {
-        this.feetForward(trainingInputs);
+    public train(features: number[][], labels: number[][], trainOptions: Partial<ITrainOptions> = defaultTrainOptions) {
+        const { optimizer, lossFunction, epochs } = { ...defaultTrainOptions, ...trainOptions };
+        const trainingSet = features.map<[number[], number[]]>((feature, i) => [feature, labels[i]]);
 
-        const deltas = optimizer(this.hiddenLayers, this.outputLayer, trainingOutputs, lossFunction.dx);
+        for (let i = 0; i < epochs; i++) {
+            trainingSet.forEach(([feature, label]) => {
+                // TODO fix that
+                for (let j = 0; j < 5; j++) {
+                    this.feetForward(feature);
 
-        this.layers.forEach((layer, i) => this.updateNeuronsWeights(layer, deltas[i]));
+                    const deltas = optimizer(this.hiddenLayers, this.outputLayer, label, lossFunction.dx);
+
+                    this.layers.forEach((layer, i) => this.updateNeuronsWeights(layer, deltas[i]));
+                }
+            });
+
+            console.log(i + 1, this.calculateTotalError(trainingSet, LossFunctions.quadratic.fx));
+
+            trainingSet.sort(() => Math.random() - 0.5);
+        }
     }
 
     public feetForward(feature: number[]): number[] {
@@ -53,12 +79,12 @@ export default class NeuralNetwork {
         });
     }
 
-    public calculateTotalError(trainingSet: Array<[number[], number[]]>, lossFunction: ILossFunction) {
+    public calculateTotalError(trainingSet: Array<[number[], number[]]>, lossFunction: LossFunction) {
         const outputLayerNeurons = this.outputLayer.getNeurons();
 
         return trainingSet.reduce((error, [trainingInputs, trainingOutputs]) => {
             this.feetForward(trainingInputs);
-            const err = trainingOutputs.reduce((sum, trainingOutput, i) => sum + lossFunction.fx(outputLayerNeurons[i].getOutput(), trainingOutput), 0);
+            const err = trainingOutputs.reduce((sum, trainingOutput, i) => sum + lossFunction(outputLayerNeurons[i].getOutput(), trainingOutput), 0);
             return error + err;
         }, 0) / trainingSet.length;
     }
