@@ -1,5 +1,6 @@
 import NeuronLayer from './NeuronLayer';
 import { Optimizer } from './optimizers';
+import { ILossFunction } from './loss-functions';
 
 export default class NeuralNetwork {
     private readonly hiddenLayers: NeuronLayer[];
@@ -31,10 +32,10 @@ export default class NeuralNetwork {
         });
     }
 
-    public train(trainingInputs: number[], trainingOutputs: number[], optimizer: Optimizer) {
+    public train(trainingInputs: number[], trainingOutputs: number[], optimizer: Optimizer, lossFunction: ILossFunction) {
         this.feetForward(trainingInputs);
 
-        const deltas = optimizer(this.hiddenLayers, this.outputLayer, trainingOutputs);
+        const deltas = optimizer(this.hiddenLayers, this.outputLayer, trainingOutputs, lossFunction.dx);
 
         this.layers.forEach((layer, i) => this.updateNeuronsWeights(layer, deltas[i]));
     }
@@ -52,12 +53,12 @@ export default class NeuralNetwork {
         });
     }
 
-    public calculateTotalError(trainingSet: Array<[number[], number[]]>) {
+    public calculateTotalError(trainingSet: Array<[number[], number[]]>, lossFunction: ILossFunction) {
         const outputLayerNeurons = this.outputLayer.getNeurons();
 
         return trainingSet.reduce((error, [trainingInputs, trainingOutputs]) => {
             this.feetForward(trainingInputs);
-            const err = trainingOutputs.reduce((sum, trainingOutput, i) => sum + outputLayerNeurons[i].calculateError(trainingOutput), 0);
+            const err = trainingOutputs.reduce((sum, trainingOutput, i) => sum + lossFunction.fx(outputLayerNeurons[i].getOutput(), trainingOutput), 0);
             return error + err;
         }, 0) / trainingSet.length;
     }

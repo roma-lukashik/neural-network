@@ -46,8 +46,4 @@ export default class Neuron {
     public calculateInputSum(): number {
         return this.inputs.reduce((sum, input, i) => sum + input * this.weights[i].getValue(), this.bias);
     }
-
-    public calculateError(targetOutput: number): number {
-        return 0.5 * (targetOutput - this.output) ** 2;
-    }
 }

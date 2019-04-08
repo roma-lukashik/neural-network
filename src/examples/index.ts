@@ -3,6 +3,7 @@ import NeuronLayer from '../NeuronLayer';
 import { trainingData } from './trainExamples';
 import { ActivateFunctions } from '../activate-functions';
 import { gradientDescent } from '../optimizers';
+import { LossFunctions } from '../loss-functions';
 
 const imageSize = 28 * 28;
 const classesNumber = 10; // ten unique numbers
@@ -21,11 +22,11 @@ const epochs = 5;
 for (let i = 1; i <= epochs; i++) {
     trainings.forEach(([feature, label]) => {
         for (let j = 0; j < 5; j++) {
-            neuralNetwork.train(feature, label, gradientDescent);
+            neuralNetwork.train(feature, label, gradientDescent, LossFunctions.quadratic);
         }
     });
 
-    console.log(i, neuralNetwork.calculateTotalError(trainings));
+    console.log(i, neuralNetwork.calculateTotalError(trainings, LossFunctions.quadratic));
 
     trainings.sort(() => Math.random() - 0.5);
 }

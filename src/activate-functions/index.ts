@@ -7,19 +7,10 @@ export interface IActivateFunction {
     dx: (vector: number[]) => number[],
 }
 
-export class ActivateFunctions {
-    public static sigmoid: IActivateFunction = {
-        fx: sigmoid,
-        dx: dxSigmoid,
-    };
+export const ActivateFunctions = {
+    sigmoid: { fx: sigmoid, dx: dxSigmoid },
 
-    public static relu: IActivateFunction = {
-        fx: relu,
-        dx: dxRelu,
-    };
+    relu: { fx: relu, dx: dxRelu },
 
-    public static softmax: IActivateFunction = {
-        fx: softmax,
-        dx: dxSoftmax,
-    };
-}
+    softmax: { fx: softmax, dx: dxSoftmax },
+};

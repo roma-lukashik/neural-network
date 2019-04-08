@@ -1,22 +1,28 @@
 import NeuronLayer from '../NeuronLayer';
+import { LossFunction } from '../loss-functions';
 
-export function gradientDescent(hiddenLayers: NeuronLayer[], outputLayer: NeuronLayer, trainingOutputs: number[]): number[][] {
-    const outputDeltas = calculateOutputDeltas(outputLayer, trainingOutputs);
+export function gradientDescent(
+    hiddenLayers: NeuronLayer[],
+    outputLayer: NeuronLayer,
+    trainingOutputs: number[],
+    dxLossFunction: LossFunction,
+): number[][] {
+    const outputDeltas = calculateOutputDeltas(outputLayer, trainingOutputs, dxLossFunction);
     const hiddenDeltas = calculateHiddenDeltas(hiddenLayers, outputLayer, outputDeltas);
 
     return [...hiddenDeltas, outputDeltas];
 }
 
-function calculateOutputDeltas(outputLayer: NeuronLayer, trainingOutputs: number[]): number[] {
+function calculateOutputDeltas(outputLayer: NeuronLayer, trainingOutputs: number[], dxLossFunction: LossFunction): number[] {
     const derivativeActivation = outputLayer.calculatePdTotalNetInputWrtInput();
-    return calculatePdErrorWrtOutput(outputLayer, trainingOutputs).map((pdErrorWrtOutput, i) => {
+    return calculatePdErrorWrtOutput(outputLayer, trainingOutputs, dxLossFunction).map((pdErrorWrtOutput, i) => {
         return pdErrorWrtOutput * derivativeActivation[i];
     });
 }
 
-function calculatePdErrorWrtOutput(outputLayer: NeuronLayer, trainingOutputs: number[]): number[] {
+function calculatePdErrorWrtOutput(outputLayer: NeuronLayer, trainingOutputs: number[], dxLossFunction: LossFunction): number[] {
     return outputLayer.getNeurons().map((outputNeuron, i) => {
-        return outputNeuron.getOutput() - trainingOutputs[i];
+        return -dxLossFunction(outputNeuron.getOutput(), trainingOutputs[i]);
     });
 }
 
