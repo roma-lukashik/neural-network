@@ -1,10 +1,12 @@
-export function softmax(vector: number[]): number[] {
-    const max = Math.max(...vector);
-    const exps = vector.map((x) => Math.exp(x - max));
-    const sum = exps.reduce((a, b) => a + b);
+import * as vector from '../engine/VectorsOperators';
+
+export function softmax(targetVector: number[]): number[] {
+    const max = vector.maxElement(targetVector);
+    const exps = targetVector.map((x) => Math.exp(x - max));
+    const sum = vector.sumElements(exps);
     return exps.map((x) => x / sum);
 }
 
-export function dxSoftmax(vector: number[]): number[] {
-    return softmax(vector).map((x) => x * (1 - x));
+export function dxSoftmax(targetVector: number[]): number[] {
+    return softmax(targetVector).map((x) => x * (1 - x));
 }

@@ -9,8 +9,6 @@ export interface IActivateFunction {
 
 export const ActivateFunctions = {
     sigmoid: { fx: sigmoid, dx: dxSigmoid },
-
     relu: { fx: relu, dx: dxRelu },
-
     softmax: { fx: softmax, dx: dxSoftmax },
 };

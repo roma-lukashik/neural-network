@@ -1,6 +1,8 @@
 import NeuronLayer from './NeuronLayer';
 import { gradientDescent, Optimizer } from './optimizers';
 import { ILossFunction, LossFunction, LossFunctions } from './loss-functions';
+import * as array from './engine/ArrayOperators';
+import * as vector from './engine/VectorsOperators';
 
 interface ITrainOptions {
     optimizer: Optimizer;
@@ -46,7 +48,7 @@ export default class NeuralNetwork {
 
     public train(features: number[][], labels: number[][], trainOptions: Partial<ITrainOptions> = defaultTrainOptions) {
         const { optimizer, lossFunction, epochs } = { ...defaultTrainOptions, ...trainOptions };
-        const trainingSet = features.map<[number[], number[]]>((feature, i) => [feature, labels[i]]);
+        const trainingSet = array.pair(features, labels);
         const errors = [] as number[][];
 
         for (let i = 0; i < epochs; i++) {
@@ -65,7 +67,7 @@ export default class NeuralNetwork {
                 errors[i].push(this.calculateError(label, lossFunction.fx));
             });
 
-            console.log(i + 1, errors[i].reduce((a, b) => a + b) / errors[i].length);
+            console.log(i + 1, vector.meanElements(errors[i]));
 
             trainingSet.sort(() => Math.random() - 0.5);
         }
@@ -85,8 +87,9 @@ export default class NeuralNetwork {
     }
 
     private calculateError(label: number[], lossFunction: LossFunction): number {
-        return this.outputLayer.getNeurons().reduce((error, neuron, i) => {
-            return error + lossFunction(neuron.getOutput(), label[i]);
-        }, 0)
+        const errors = array.pair(this.outputLayer.getNeurons(), label).map(([neuron, target]) => {
+            return lossFunction(neuron.getOutput(), target);
+        });
+        return vector.sumElements(errors);
     }
 }

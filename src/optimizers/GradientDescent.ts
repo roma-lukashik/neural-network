@@ -1,5 +1,7 @@
 import NeuronLayer from '../NeuronLayer';
 import { LossFunction } from '../loss-functions';
+import * as vector from '../engine/VectorsOperators';
+import * as array from '../engine/ArrayOperators';
 
 export function gradientDescent(
     hiddenLayers: NeuronLayer[],
@@ -14,15 +16,14 @@ export function gradientDescent(
 }
 
 function calculateOutputDeltas(outputLayer: NeuronLayer, trainingOutputs: number[], dxLossFunction: LossFunction): number[] {
-    const derivativeActivation = outputLayer.calculatePdTotalNetInputWrtInput();
-    return calculatePdErrorWrtOutput(outputLayer, trainingOutputs, dxLossFunction).map((pdErrorWrtOutput, i) => {
-        return pdErrorWrtOutput * derivativeActivation[i];
-    });
+    const pdErrorWrtOutput = calculatePdErrorWrtOutput(outputLayer, trainingOutputs, dxLossFunction);
+    const pdTotalNetInputWrtInput = outputLayer.calculatePdTotalNetInputWrtInput();
+    return vector.hadamard(pdErrorWrtOutput, pdTotalNetInputWrtInput);
 }
 
 function calculatePdErrorWrtOutput(outputLayer: NeuronLayer, trainingOutputs: number[], dxLossFunction: LossFunction): number[] {
-    return outputLayer.getNeurons().map((outputNeuron, i) => {
-        return -dxLossFunction(outputNeuron.getOutput(), trainingOutputs[i]);
+    return array.pair(outputLayer.getNeurons(), trainingOutputs).map(([outputNeuron, trainingOutput]) => {
+        return -dxLossFunction(outputNeuron.getOutput(), trainingOutput);
     });
 }
 
@@ -31,11 +32,14 @@ function calculateHiddenDeltas(previousLayers: NeuronLayer[], nextLayer: NeuronL
     const previousLayer = previousLayersCopy.pop();
     const derivativeActivation = previousLayer.calculatePdTotalNetInputWrtInput();
 
-    const previousLayerDeltas = previousLayer.getNeurons().map((previousNeuron, i) => {
-        return derivativeActivation[i] * nextLayer.getNeurons().reduce((sum, nextNeuron, j) => {
-            return sum + nextLayerDeltas[j] * nextNeuron.getWeight(i).getValue();
-        }, 0);
+    const weights = previousLayer.getNeurons().map((_, i) => {
+        return vector.dot(
+            nextLayerDeltas,
+            nextLayer.getNeurons().map((nextNeuron) => nextNeuron.getWeight(i).getValue()),
+        );
     });
+
+    const previousLayerDeltas = vector.hadamard(derivativeActivation, weights);
 
     if (previousLayersCopy.length > 0) {
         return [...calculateHiddenDeltas(previousLayersCopy, previousLayer, previousLayerDeltas), previousLayerDeltas];

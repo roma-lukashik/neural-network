@@ -1,4 +1,5 @@
 import Weight from './Weight';
+import * as vector from './engine/VectorsOperators';
 
 export default class Neuron {
     private readonly weights: Weight[] = [];
@@ -44,6 +45,7 @@ export default class Neuron {
     }
 
     public calculateInputSum(): number {
-        return this.inputs.reduce((sum, input, i) => sum + input * this.weights[i].getValue(), this.bias);
+        const weights = this.weights.map((weight) => weight.getValue());
+        return this.bias + vector.dot(this.inputs, weights);
     }
 }
