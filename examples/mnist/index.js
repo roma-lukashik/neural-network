@@ -1,7 +1,7 @@
-import NeuralNetwork from '../NeuralNetwork';
-import NeuronLayer from '../NeuronLayer';
-import { features, labels } from './trainExamples';
-import { ActivateFunctions } from '../activate-functions';
+const NeuralNetwork = require('../../build/src/NeuralNetwork').default;
+const NeuronLayer = require('../../build/src/NeuronLayer').default;
+const { features, labels } = require('./trainingSet');
+const { ActivateFunctions } = require('../../build/src/activate-functions/index');
 
 const imageSize = 28 * 28;
 const classesNumber = 10; // ten unique numbers
@@ -16,6 +16,6 @@ neuralNetwork.train(features, labels);
 
 console.log(JSON.stringify(features.map((feature) => argmax(neuralNetwork.feetForward(feature)))));
 
-function argmax(vector: number[]): number {
+function argmax(vector) {
     return vector.indexOf(Math.max(...vector));
 }

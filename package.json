@@ -2,9 +2,9 @@
   "name": "machine-learning",
   "version": "1.0.0",
   "description": "the machine learning framework",
-  "main": "src/examples/index.ts",
+  "main": "examples/mnist/index.ts",
   "scripts": {
-    "start": "node build/src/examples/index.js",
+    "start": "node examples/mnist/index.js",
     "watch": "tsc -w"
   },
   "author": "Roman Lukashik",
