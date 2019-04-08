@@ -8,12 +8,16 @@ export function hadamard(vectorA: number[], vectorB: number[]): number[] {
     return array.pair(vectorA, vectorB).map(([x, y]) => x * y);
 }
 
-export function sumElements(vector: number[]): number {
+export function scalar(vector: number[], number: number): number[] {
+    return vector.map((x) => x * number);
+}
+
+export function argSum(vector: number[]): number {
     return vector.reduce((a, b) => a + b);
 }
 
-export function meanElements(vector: number[]): number {
-    return sumElements(vector) / vector.length;
+export function argMean(vector: number[]): number {
+    return argSum(vector) / vector.length;
 }
 
 export function maxElement(vector: number[]): number {

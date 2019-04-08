@@ -35,7 +35,7 @@ export default class NeuralNetwork {
         const [firstLayer, ...otherLayers] = this.layers;
 
         firstLayer.getNeurons().forEach((neuron) => {
-            Array(this.inputsNumber).fill(0).forEach(() => neuron.addWeight(Math.random() - 0.5));
+            array.times(this.inputsNumber, () => neuron.addWeight(Math.random() - 0.5));
         });
 
         otherLayers.forEach((layer, i) => {
@@ -51,8 +51,8 @@ export default class NeuralNetwork {
         const trainingSet = array.pair(features, labels);
         const errors = [] as number[][];
 
-        for (let i = 0; i < epochs; i++) {
-            errors[i] = [];
+        array.times(epochs, (epoch) => {
+            errors[epoch] = [];
 
             trainingSet.forEach(([feature, label]) => {
                 // TODO fix that
@@ -64,25 +64,34 @@ export default class NeuralNetwork {
                     this.layers.forEach((layer, i) => this.updateNeuronsWeights(layer, deltas[i]));
                 }
 
-                errors[i].push(this.calculateError(label, lossFunction.fx));
+                errors[epoch].push(this.calculateError(label, lossFunction.fx));
             });
 
-            console.log(i + 1, vector.meanElements(errors[i]));
+            console.log(epoch + 1, vector.argMean(errors[epoch]));
 
             trainingSet.sort(() => Math.random() - 0.5);
-        }
+        });
     }
 
     public feetForward(feature: number[]): number[] {
-        return this.layers.reduce((layerInput, layer) => layer.feedForward(layerInput), feature);
+        let output = feature;
+
+        this.layers.forEach((layer) => {
+            output = layer.feedForward(output);
+        });
+
+        return output;
     }
 
     private updateNeuronsWeights(neuronLayer: NeuronLayer, deltas: number[]) {
+        const deltasWithLearningRate = vector.scalar(deltas, this.learningRate);
+
         neuronLayer.getNeurons().forEach((neuron, i) => {
             neuron.getWeights().forEach((neuronWeight, j) => {
-                neuronWeight.setValue(neuronWeight.getValue() - this.learningRate * deltas[i] * neuron.calculatePdTotalNetInputWrtWeight(j));
+                const weightDelta = deltasWithLearningRate[i] * neuron.calculatePdTotalNetInputWrtWeight(j);
+                neuronWeight.setValue(neuronWeight.getValue() - weightDelta);
             });
-            neuron.setBias(neuron.getBias() - this.learningRate * deltas[i]);
+            neuron.setBias(neuron.getBias() - deltasWithLearningRate[i]);
         });
     }
 
@@ -90,6 +99,6 @@ export default class NeuralNetwork {
         const errors = array.pair(this.outputLayer.getNeurons(), label).map(([neuron, target]) => {
             return lossFunction(neuron.getOutput(), target);
         });
-        return vector.sumElements(errors);
+        return vector.argSum(errors);
     }
 }

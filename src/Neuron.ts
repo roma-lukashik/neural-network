@@ -40,8 +40,8 @@ export default class Neuron {
         return this.output;
     }
 
-    public calculateNeuronActivation(output: number): number {
-        return this.output = output;
+    public setOutput(output: number) {
+        this.output = output;
     }
 
     public calculateInputSum(): number {

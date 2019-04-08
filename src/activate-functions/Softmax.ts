@@ -3,7 +3,7 @@ import * as vector from '../engine/VectorsOperators';
 export function softmax(targetVector: number[]): number[] {
     const max = vector.maxElement(targetVector);
     const exps = targetVector.map((x) => Math.exp(x - max));
-    const sum = vector.sumElements(exps);
+    const sum = vector.argSum(exps);
     return exps.map((x) => x / sum);
 }
 

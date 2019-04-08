@@ -1,5 +1,6 @@
 import Neuron from './Neuron';
 import { IActivateFunction } from './activate-functions';
+import * as array from './engine/ArrayOperators';
 
 export default class NeuronLayer {
     private readonly neurons: Neuron[];
@@ -17,7 +18,9 @@ export default class NeuronLayer {
 
         const outputs = this.calculateNeuronsActivation();
 
-        return this.neurons.map((neuron, i) => neuron.calculateNeuronActivation(outputs[i]));
+        array.pair(this.neurons, outputs).forEach(([neuron, output]) => neuron.setOutput(output));
+
+        return outputs;
     }
 
     public calculateNeuronsActivation(): number[] {
