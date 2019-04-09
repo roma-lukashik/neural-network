@@ -3,13 +3,25 @@ import { gradientDescent, Optimizer } from './optimizers';
 import { ILossFunction, LossFunction, LossFunctions } from './loss-functions';
 import * as array from './engine/ArrayOperators';
 import * as vector from './engine/VectorsOperators';
+import * as Distributions from './engine/Distributions';
 import Vector = vector.Vector;
+import Neuron from './Neuron';
+
+interface INeuralNetworkOptions {
+    learningRate: number;
+    weightInitializationStrategy: () => number;
+}
 
 interface ITrainOptions {
     optimizer: Optimizer;
     lossFunction: ILossFunction;
     epochs: number;
 }
+
+const defaultNeuralNetworkOptions: INeuralNetworkOptions = {
+    learningRate: 0.1,
+    weightInitializationStrategy: Distributions.uniform,
+};
 
 const defaultTrainOptions: ITrainOptions = {
     optimizer: gradientDescent,
@@ -24,8 +36,9 @@ export default class NeuralNetwork {
     constructor(
         private readonly inputsNumber: number,
         private readonly layers: NeuronLayer[],
-        private readonly learningRate: number = 0.1,
+        private readonly neuralNetworkOptions: Partial<INeuralNetworkOptions> = {},
     ) {
+        this.neuralNetworkOptions = { ...defaultNeuralNetworkOptions, ...this.neuralNetworkOptions };
         this.hiddenLayers = this.layers.slice(0, this.layers.length - 1);
         this.outputLayer = this.layers[this.layers.length - 1];
 
@@ -36,18 +49,22 @@ export default class NeuralNetwork {
         const [firstLayer, ...otherLayers] = this.layers;
 
         firstLayer.getNeurons().forEach((neuron) => {
-            array.times(this.inputsNumber, () => neuron.addWeight(Math.random() - 0.5));
+            array.times(this.inputsNumber, () => this.initializeWeight(neuron));
         });
 
         otherLayers.forEach((layer, i) => {
             const previousLayer = this.layers[i];
             layer.getNeurons().forEach((neuron) => {
-                previousLayer.getNeurons().forEach(() => neuron.addWeight(Math.random() - 0.5));
+                previousLayer.getNeurons().forEach(() => this.initializeWeight(neuron));
             });
         });
     }
 
-    public train(features: Vector[], labels: Vector[], trainOptions: Partial<ITrainOptions> = defaultTrainOptions): Vector {
+    private initializeWeight(neuron: Neuron) {
+        neuron.addWeight(this.neuralNetworkOptions.weightInitializationStrategy());
+    }
+
+    public train(features: Vector[], labels: Vector[], trainOptions: Partial<ITrainOptions> = {}): Vector {
         const { optimizer, lossFunction, epochs } = { ...defaultTrainOptions, ...trainOptions };
         const trainingSet = array.pair(features, labels);
         const errors = [] as Vector;
@@ -84,7 +101,7 @@ export default class NeuralNetwork {
     }
 
     private updateNeuronsWeights(neuronLayer: NeuronLayer, deltas: Vector) {
-        const deltasWithLearningRate = vector.scalar(deltas, this.learningRate);
+        const deltasWithLearningRate = vector.scalar(deltas, this.neuralNetworkOptions.learningRate);
 
         neuronLayer.getNeurons().forEach((neuron, i) => {
             neuron.getWeights().forEach((neuronWeight, j) => {
@@ -96,8 +113,8 @@ export default class NeuralNetwork {
     }
 
     private calculateError(label: Vector, lossFunction: LossFunction): number {
-        const errors = array.pair(this.outputLayer.getNeurons(), label).map(([neuron, target]) => {
-            return lossFunction(neuron.getOutput(), target);
+        const errors = array.pair(this.outputLayer.getOutput(), label).map(([prediction, target]) => {
+            return lossFunction(prediction, target);
         });
         return vector.argSum(errors);
     }
